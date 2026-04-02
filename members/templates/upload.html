@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Excel Upload Portal</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'members/style.css' %}">
+</head>
+<body>
+    <div >
+    <img src="https://static0.makeuseofimages.com/wordpress/wp-content/uploads/2023/07/wrapcols-excel.jpg?w=1200&h=628&fit=crop" width=1500 height=300>
+    <h1 style="text-align:center">EXCELINSIGHTS</h1>
+</div>
+
+<div class="container">
+    <h2>Upload Excel File</h2>
+
+    <!-- Upload Form -->
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" name="file" required>
+        <button type="submit">Upload</button>
+    </form>
+
+    <!-- Display Data Preview -->
+    {% if data %}
+        <h2>Preview of Excel Data</h2>
+        <div class="table-container">
+            {{ data|safe }}
+        </div>
+    {% endif %}
+
+    {% if summary %}
+    <h2>Dataset Summary</h2>
+
+    <p><b>Rows:</b> {{ summary.Rows }}</p>
+    <p><b>Columns:</b> {{ summary.Columns }}</p>
+    <p><b>Column Names:</b> {{ summary.Column_Names }}</p>
+
+    <h3>Missing Values</h3>
+    <ul>
+        {% for col, val in summary.Missing_values.items %}
+            <li>{{ col }} : {{ val }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %} 
+</div>
+
+</body>
+</html>
