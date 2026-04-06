@@ -12,16 +12,18 @@ import base64
 
 
 def home(request):
-    context = {}
+    context = {
+        'uploaded':False
+    }
 
     if request.method == 'POST':
+        context['uploaded'] = True
         file = request.FILES.get('file')
 
         if file is None:
-            return render(request, "home.html", {"error": "Please select a file"})
-
+            context['error'] = "Please select a file"
+            return render(request, "home.html", context)
         filename = file.name.lower()
-
         try:
             # -------- FILE HANDLING --------
             if filename.endswith(('.xlsx', '.xls')):
@@ -36,8 +38,8 @@ def home(request):
             elif filename.endswith('.csv'):
                 df = pd.read_csv(file)
             else:
-                return render(request, "home.html", {"error": "Unsupported file format"})
-
+                context['error'] = "Unsupported file format"
+                return render(request, "home.html", context)
             # Ensure column names are strings
             df.columns = df.columns.astype(str)
 
@@ -46,8 +48,8 @@ def home(request):
 
             # ---------- FEATURE ENGINEERING ----------
             df_processed = df.copy()
-            df_processed = df_processed.apply(pd.to_numeric, errors='ignore')
-
+            for col in df_processed.columns:
+                df_processed[col] = pd.to_numeric(df_processed[col], errors='coerce')
             for col in df_processed.columns:
                 if df_processed[col].dtype == 'object':
                     df_processed[col] = df_processed[col].fillna("Unknown")
@@ -88,8 +90,8 @@ def home(request):
                 context['missing'] = "<p>No missing values 🎉</p>"
 
             # ---------- OTHER ANALYSIS ----------
-            context['dtypes'] = df.dtypes.to_frame("Data Types").to_html(classes="table")
-            context['stats'] = df.describe().to_html(classes="table")
+            context['dtypes'] = df.dtypes.astype(str).to_frame("Data Types").to_html(classes="table")
+            context['stats'] = df.describe(include='all').to_html(classes="table")
 
             context['processed'] = df_processed.head().to_html(classes="table table-bordered")
 
@@ -107,21 +109,26 @@ def home(request):
             else:
                 insights.append("No missing values found")
 
-            if not numeric_df.empty:
-                corr_matrix = numeric_df.corr()
-                corr_pairs = corr_matrix.unstack()
-                corr_pairs = corr_pairs[corr_pairs != 1]
+            if not numeric_df.empty and numeric_df.dropna().shape[0]>1:
+                try:
+                    corr_matrix = numeric_df.corr()
+                    if not corr.matrix.isnull().all().all():
+                        corr_pairs = corr_matrix.unstack()
+                        corr_pairs = corr_pairs[corr_pairs != 1]
 
-                if not corr_pairs.empty:
-                    top_pair = corr_pairs.abs().idxmax()
-                    insights.append(f"Strongest relationship: {top_pair[0]} ↔ {top_pair[1]}")
+                        if not corr_pairs.empty:
+                            top_pair = corr_pairs.abs().idxmax()
+                            insights.append(f"Strongest relationship: {top_pair[0]} ↔ {top_pair[1]}")
 
-                variances = numeric_df.var()
-                top_feature = variances.idxmax()
-                insights.append(f"Most influential feature: {top_feature}")
-
+                    variances = numeric_df.var()
+                    if not variances.isnull().all():
+                        top_feature = variances.idxmax()
+                        insights.append(f"Most influential feature: {top_feature}")
+                except Exception as e:
+                    print("Insight error:",e)
+            else:
+                insights.append("Not enough numeric data for correlation analysis")
             context['insights'] = insights
-
             # ---------- HISTOGRAM ----------
             if not numeric_df.empty:
                 plt.figure(figsize=(6, 4))
@@ -157,10 +164,10 @@ def home(request):
                 plt.close()
 
         except Exception as e:
-            return render(request, "home.html", {"error": str(e)})
-
-    return render(request, "home.html", context)
-
+            context['error'] = str(e)
+            print("ERROR:", e)
+            return render(request, "home.html", context)
+    return render(request,"home.html",context)
 
 def download_file(request):
     data = request.session.get('processed_data')
