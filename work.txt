@@ -1,3 +1,40 @@
+Folder structure :
+
+Excel_Insights/
+│
+├── manage.py
+│
+├── portal/
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── urls.py
+│   ├── asgi.py
+│   └── wsgi.py
+│
+├── core/
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── views.py    (The logic part)
+│   ├── urls.py
+│   │
+│   ├── migrations/
+│   │
+│   ├── templates/         (THIS is your HTML folder)
+│   │   └── home.html
+│   │
+│   └── static/           (CSS )
+│
+├── myworld/
+│
+├── requirements.txt
+├── work.txt
+├── README.md
+└── db.sqlite3
+
+
+
 4 march:
 made changes in frontend design and connected backend to frontend
 minor changes are to be made later.
