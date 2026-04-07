@@ -42,3 +42,12 @@ minor changes are to be made later.
 7 march:
 made changes in views.py for better handling of column names,
 the problem is now fixed.
+
+
+
+Note:
+
+To run the project:
+Run `python manage.py runserver 8000` and open the link shown in the terminal.
+
+If running for the first time, install dependencies using `pip install -r requirements.txt`, then run `python manage.py runserver 8000` and open the link shown in the terminal.
