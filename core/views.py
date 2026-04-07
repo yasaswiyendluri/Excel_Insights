@@ -132,6 +132,7 @@ def home(request):
             else:
                 insights.append("Not enough numeric data for correlation analysis")
             context['insights'] = insights
+
             # ---------- HISTOGRAM ----------
             if not numeric_df.empty:
                 plt.figure(figsize=(6, 4))
@@ -149,16 +150,34 @@ def home(request):
 
             # ---------- HEATMAP ----------
             if not numeric_df.empty:
-                plt.figure(figsize=(6, 4))
+                plt.figure(figsize=(14, 10))  # bigger size
+
                 corr = numeric_df.corr()
 
-                plt.imshow(corr, cmap='coolwarm')
+                plt.imshow(corr, cmap='coolwarm', aspect='auto')
                 plt.colorbar()
-                plt.xticks(range(len(corr.columns)), corr.columns, rotation=90)
-                plt.yticks(range(len(corr.columns)), corr.columns)
+
+                # Fix labels
+                plt.xticks(
+                    ticks=range(len(corr.columns)),
+                    labels=corr.columns,
+                    rotation=90,
+                    fontsize=8
+                )
+                plt.yticks(
+                    ticks=range(len(corr.columns)),
+                    labels=corr.columns,
+                    fontsize=8
+                )
+
+                plt.title("Correlation Heatmap")
+
+                # IMPORTANT FIXES 
+                plt.tight_layout()
+                plt.subplots_adjust(bottom=0.3, left=0.3)
 
                 buffer = io.BytesIO()
-                plt.savefig(buffer, format='png')
+                plt.savefig(buffer, format='png', bbox_inches='tight')  # prevents cutting
                 buffer.seek(0)
 
                 context['heatmap'] = base64.b64encode(buffer.getvalue()).decode()
