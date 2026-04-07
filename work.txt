@@ -1,3 +1,7 @@
 4 march:
 made changes in frontend design and connected backend to frontend
 minor changes are to be made later.
+
+7 march:
+made changes in views.py for better handling of column names,
+the problem is now fixed.

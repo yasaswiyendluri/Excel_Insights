@@ -27,12 +27,16 @@ def home(request):
         try:
             # -------- FILE HANDLING --------
             if filename.endswith(('.xlsx', '.xls')):
-                df = pd.read_excel(file, engine='openpyxl', skiprows=3)
-
+                df = pd.read_excel(file, engine='openpyxl',header=None)
+                for i in range(5):
+                    if df.iloc[i].notnull().sum()>len(df.columns)*0.5:
+                        df.columns=df.iloc[i]
+                        df=df[i+1:]
+                        break
+                df = df.reset_index(drop=True)
                 df = df.loc[:, ~df.columns.astype(str).str.contains('^Unnamed')]
-
-                df.columns = df.iloc[0]
-                df = df[1:]
+                df = df.loc[:, ~df.columns.duplicated()]
+                
                 df.reset_index(drop=True, inplace=True)
 
             elif filename.endswith('.csv'):
@@ -41,20 +45,19 @@ def home(request):
                 context['error'] = "Unsupported file format"
                 return render(request, "home.html", context)
             # Ensure column names are strings
-            df.columns = df.columns.astype(str)
+            df.columns = df.columns.astype(str).str.strip()
 
             # ---------- ORIGINAL DATA ----------
             context['tables'] = df.head().to_html(classes="table table-bordered")
 
             # ---------- FEATURE ENGINEERING ----------
+            numeric_cols = df.select_dtypes(include=['number']).columns
+            categorical_cols = df.select_dtypes(include=['object']).columns
             df_processed = df.copy()
-            for col in df_processed.columns:
-                df_processed[col] = pd.to_numeric(df_processed[col], errors='coerce')
-            for col in df_processed.columns:
-                if df_processed[col].dtype == 'object':
-                    df_processed[col] = df_processed[col].fillna("Unknown")
-                else:
-                    df_processed[col] = df_processed[col].fillna(df_processed[col].mean())
+            for col in numeric_cols:
+                df_processed[col] = df_processed[col].fillna(df_processed[col].mean())
+            for col in categorical_cols:
+                df_processed[col] = df_processed[col].fillna("Unknown")
 
             # Datetime handling
             for col in df_processed.select_dtypes(include=['datetime64[ns]']).columns:
@@ -64,8 +67,8 @@ def home(request):
                 df_processed.drop(col, axis=1, inplace=True)
 
             # Encoding
-            le = LabelEncoder()
-            for col in df_processed.select_dtypes(include='object').columns:
+            for col in categorical_cols:
+                le = LabelEncoder()
                 df_processed[col] = le.fit_transform(df_processed[col].astype(str))
 
             # Scaling
@@ -112,7 +115,7 @@ def home(request):
             if not numeric_df.empty and numeric_df.dropna().shape[0]>1:
                 try:
                     corr_matrix = numeric_df.corr()
-                    if not corr.matrix.isnull().all().all():
+                    if not corr_matrix.isnull().all().all():
                         corr_pairs = corr_matrix.unstack()
                         corr_pairs = corr_pairs[corr_pairs != 1]
 
@@ -132,7 +135,7 @@ def home(request):
             # ---------- HISTOGRAM ----------
             if not numeric_df.empty:
                 plt.figure(figsize=(6, 4))
-                numeric_df.iloc[:, :3].hist()
+                numeric_df.hist(figsize=(8,6))
                 plt.tight_layout()
 
                 buffer = io.BytesIO()
