@@ -13,7 +13,7 @@ import base64
 
 def home(request):
     context = {
-        'uploaded':False
+        'uploaded': False
     }
 
     if request.method == 'POST':
@@ -23,20 +23,23 @@ def home(request):
         if file is None:
             context['error'] = "Please select a file"
             return render(request, "home.html", context)
+
         filename = file.name.lower()
+
         try:
             # -------- FILE HANDLING --------
             if filename.endswith(('.xlsx', '.xls')):
-                df = pd.read_excel(file, engine='openpyxl',header=None)
+                df = pd.read_excel(file, engine='openpyxl', header=None)
+
                 for i in range(5):
-                    if df.iloc[i].notnull().sum()>len(df.columns)*0.5:
-                        df.columns=df.iloc[i]
-                        df=df[i+1:]
+                    if df.iloc[i].notnull().sum() > len(df.columns) * 0.5:
+                        df.columns = df.iloc[i]
+                        df = df[i + 1:]
                         break
+
                 df = df.reset_index(drop=True)
                 df = df.loc[:, ~df.columns.astype(str).str.contains('^Unnamed')]
                 df = df.loc[:, ~df.columns.duplicated()]
-                
                 df.reset_index(drop=True, inplace=True)
 
             elif filename.endswith('.csv'):
@@ -44,7 +47,7 @@ def home(request):
             else:
                 context['error'] = "Unsupported file format"
                 return render(request, "home.html", context)
-            # Ensure column names are strings
+
             df.columns = df.columns.astype(str).str.strip()
 
             # ---------- ORIGINAL DATA ----------
@@ -53,9 +56,12 @@ def home(request):
             # ---------- FEATURE ENGINEERING ----------
             numeric_cols = df.select_dtypes(include=['number']).columns
             categorical_cols = df.select_dtypes(include=['object']).columns
+
             df_processed = df.copy()
+
             for col in numeric_cols:
                 df_processed[col] = df_processed[col].fillna(df_processed[col].mean())
+
             for col in categorical_cols:
                 df_processed[col] = df_processed[col].fillna("Unknown")
 
@@ -75,11 +81,21 @@ def home(request):
             numeric_cols = df_processed.select_dtypes(include=['int64', 'float64']).columns
             numeric_df = df_processed[numeric_cols]
 
+            # ---------- FILTER USEFUL NUMERIC COLUMNS ----------
+            filtered_cols = []
+
+            for col in numeric_df.columns:
+                if numeric_df[col].nunique() > 10:
+                    if not any(x in col.lower() for x in ['id', 'no', 'mobile']):
+                        filtered_cols.append(col)
+
+            clean_numeric_df = numeric_df[filtered_cols]
+
             if len(numeric_cols) > 0:
                 scaler = StandardScaler()
                 df_processed[numeric_cols] = scaler.fit_transform(df_processed[numeric_cols])
 
-            # ---------- CLEAN MISSING VALUES (FIXED) ----------
+            # ---------- CLEAN MISSING VALUES ----------
             missing = df.isnull().sum()
 
             ignore_cols = ['roll', 'id', 'name']
@@ -112,9 +128,10 @@ def home(request):
             else:
                 insights.append("No missing values found")
 
-            if not numeric_df.empty and numeric_df.dropna().shape[0]>1:
+            if not numeric_df.empty and numeric_df.dropna().shape[0] > 1:
                 try:
                     corr_matrix = numeric_df.corr()
+
                     if not corr_matrix.isnull().all().all():
                         corr_pairs = corr_matrix.unstack()
                         corr_pairs = corr_pairs[corr_pairs != 1]
@@ -124,19 +141,23 @@ def home(request):
                             insights.append(f"Strongest relationship: {top_pair[0]} ↔ {top_pair[1]}")
 
                     variances = numeric_df.var()
+
                     if not variances.isnull().all():
                         top_feature = variances.idxmax()
                         insights.append(f"Most influential feature: {top_feature}")
+
                 except Exception as e:
-                    print("Insight error:",e)
+                    print("Insight error:", e)
             else:
                 insights.append("Not enough numeric data for correlation analysis")
+
             context['insights'] = insights
 
+        
             # ---------- HISTOGRAM ----------
-            if not numeric_df.empty:
-                plt.figure(figsize=(6, 4))
-                numeric_df.hist(figsize=(8,6))
+            if not clean_numeric_df.empty:
+                plt.figure(figsize=(8, 6))
+                clean_numeric_df.hist(figsize=(10, 8))
                 plt.tight_layout()
 
                 buffer = io.BytesIO()
@@ -147,17 +168,18 @@ def home(request):
 
                 buffer.close()
                 plt.close()
+            else:
+                context['histogram'] = None
 
             # ---------- HEATMAP ----------
             if not numeric_df.empty:
-                plt.figure(figsize=(14, 10))  # bigger size
+                plt.figure(figsize=(14, 10))
 
                 corr = numeric_df.corr()
 
                 plt.imshow(corr, cmap='coolwarm', aspect='auto')
                 plt.colorbar()
 
-                # Fix labels
                 plt.xticks(
                     ticks=range(len(corr.columns)),
                     labels=corr.columns,
@@ -172,12 +194,11 @@ def home(request):
 
                 plt.title("Correlation Heatmap")
 
-                # IMPORTANT FIXES 
                 plt.tight_layout()
                 plt.subplots_adjust(bottom=0.3, left=0.3)
 
                 buffer = io.BytesIO()
-                plt.savefig(buffer, format='png', bbox_inches='tight')  # prevents cutting
+                plt.savefig(buffer, format='png', bbox_inches='tight')
                 buffer.seek(0)
 
                 context['heatmap'] = base64.b64encode(buffer.getvalue()).decode()
@@ -189,7 +210,9 @@ def home(request):
             context['error'] = str(e)
             print("ERROR:", e)
             return render(request, "home.html", context)
-    return render(request,"home.html",context)
+
+    return render(request, "home.html", context)
+
 
 def download_file(request):
     data = request.session.get('processed_data')
@@ -200,7 +223,7 @@ def download_file(request):
     df = pd.DataFrame(data)
 
     response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="processed_data.csv"'
+    response['Content-Disposition'] = 'attachment; filename=\"processed_data.csv\"'
 
     df.to_csv(response, index=False)
 
