@@ -51,3 +51,13 @@ To run the project:
 Run `python manage.py runserver 8000` and open the link shown in the terminal.
 
 If running for the first time, install dependencies using `pip install -r requirements.txt`, then run `python manage.py runserver 8000` and open the link shown in the terminal.
+
+7 march:
+Completed Fixes
+Resolved heatmap issues, including incorrect column overwriting.
+Improved histogram generation by filtering out unnecessary columns (e.g., IDs and low-unique categorical features).
+
+Pending Issues / To Be Fixed
+Uploaded file name is not being displayed.
+Tables are showing misleading or inconsistent data.
+Download functionality needs to be implemented.
