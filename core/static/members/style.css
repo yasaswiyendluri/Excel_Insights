@@ -10,7 +10,7 @@
         height: 100vh;
     }
 
-    /* Sidebar */
+/* ================= SIDEBAR ================= */
     .sidebar {
         width: 220px;
         background: #161b22;
@@ -18,7 +18,7 @@
     }
 
     .sidebar h2 {
-        color: #52d77f;
+        color: #43d861;
         text-align: center;
         margin-bottom: 30px;
     }
@@ -34,39 +34,30 @@
         text-align: left;
         cursor: pointer;
         border-radius: 6px;
+        transition: 0.2s;
     }
 
-    .tab-btn:hover {
+    .tab-btn {
         background: #21262d;
     }
 
-    .active {
-        background: #238636;
+    .tab-btn.active {
+        background: #43d861;
         color: white;
     }
 
-    /* Dropdown */
-    .dropdown-content {
-        display: none;
-        margin-left: 10px;
-    }
-
-    .dropdown-open {
-        display: block;
-    }
-
-    /* Main content */
+    /* ================= MAIN ================= */
     .main {
         flex: 1;
-        padding:20px;
+        padding: 20px;
         display: flex;
-        justify-content: center; 
+        justify-content: center;
         overflow-x: auto;
     }
 
     .content {
-        display:none;
-        width: 100%;           
+        display: none;
+        width: 100%;
         max-width: 1200px;
     }
 
@@ -74,24 +65,19 @@
         display: block;
     }
 
-    /* Card */
     .card {
         background: #161b22;
         padding: 30px;
         border-radius: 12px;
         box-shadow: 0 0 20px rgba(0,0,0,0.6);
-
         width: 100%;
-        max-width: 1100px;   
+        max-width: 1100px;
         margin: auto;
         overflow-x: auto;
+
     }
 
-    .card h2 {
-        margin-bottom: 20px;
-    }
-
-    /* Upload box */
+    /* ================= UPLOAD ================= */
     .upload-box {
         border: 2px dashed #30363d;
         padding: 30px;
@@ -99,11 +85,6 @@
         border-radius: 10px;
         cursor: pointer;
         width: 100%;
-        max-width: 100%;    
-        display: block;
-    }
-
-    .upload-box:hover {
         border-color: #58a6ff;
     }
 
@@ -121,7 +102,7 @@
         width: 100%;
         margin-top: 20px;
         padding: 12px;
-        background: #2ea043;
+        background: #43d861;
         border: none;
         color: white;
         border-radius: 6px;
@@ -129,38 +110,41 @@
         cursor: pointer;
     }
 
-    .upload-btn:hover {
-        background: #238636;
+    .upload-btn {
+        background: #43d861;
     }
 
-    table {
-    width: 100%;
-    border-collapse: collapse;
-    color: white;
-    font-size: 14px;
-    margin-top: 15px;
-    overflow: hidden;
+    /* ================= TABLE SCROLL FIX ================= */
+    .table-container {
+        overflow-x: auto;
+        width: 100%;
+        margin-top: 15px;
+    }
+
+    .table-container table {
+        min-width: 900px;
+        width: max-content;
+        border-collapse: collapse;
     }
 
     th {
-    background: #21262d;      
-    color: #58a6ff;
-    font-weight: 600;
-    padding: 10px;
-    text-align: left;
+        background: #21262d;
+        color: #58a6ff;
+        font-weight: 600;
+        padding: 10px;
+        text-align: left;
     }
 
     td {
-    background: #0d1117;
-    padding: 10px;       
+        background: #0d1117;
+        padding: 10px;
     }
 
     td, th {
-    border: 1px solid #30363d;
-    word-break: break-word;
-    max-width: 200px;
-    
+        border: 1px solid #30363d;
+        white-space: nowrap; 
     }
-    tr:hover td {
-    background: #161b22;
+
+    tr td {
+        background: #161b22;
     }

@@ -4,26 +4,32 @@
     <head>
     <meta charset="UTF-8">
     <title>Excel Insights</title>
+    <!--linking the css part-->
+
     <link rel="stylesheet" href="{% static 'members/style.css' %}">
 </head>
 <body>
+    <!--sidebar-->
 <div class="sidebar">
     <h2>Excel Insights</h2>
 
-    <button class="tab-btn active" onclick="openTab(event, 'upload')">Upload</button>
+    <button class="tab-btn active" onclick="openTab('upload', this)">Upload</button>
 
-    <button class="tab-btn" onclick="toggleDropdown()">Data Insights ▼</button>
+    <button class="tab-btn" onclick="openTab('summary', this)">Basic Summary</button>
 
-    <div id="dropdown" class="dropdown-content">
-        <button class="tab-btn" onclick="openTab(event, 'summary')">Data Summary</button>
-        <button class="tab-btn" onclick="openTab(event, 'visualization')">Data Visualization</button>
-    </div>
+    <button class="tab-btn" onclick="openTab('cleaning', this)">Data Cleaning & Processing</button>
+
+    <button class="tab-btn" onclick="openTab('feature', this)">Feature Selection</button>
+
+    <button class="tab-btn" onclick="openTab('pca', this)">PCA Analysis</button>
+
+    <button class="tab-btn" onclick="openTab('insights', this)">Auto Insights</button>
+
+    <button class="tab-btn" onclick="openTab('visualization', this)">Data Visualization</button>
 </div>
-
-<!-- Main -->
+<!--main page-->
 <div class="main">
 
-    <!-- Upload -->
     <div id="upload" class="content active">
         <div class="card">
             <h2>Upload Excel File</h2>
@@ -31,11 +37,11 @@
             <form method="POST" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="upload-box" onclick="document.getElementById('fileInput').click()">
-                    <span class="file-label">Drop file or click to upload</span>
+                    <span class="file-label" id="fileLabel">Drop file or click to upload</span>
                 </div>
                     <input type="file" id="fileInput" name="file" required>
 
-                <button type="submit" class="upload-btn">UPLOAD</button>
+                <button type="submit" name="action" value="upload" class="upload-btn">UPLOAD</button>
             </form>
         </div>
     </div>
@@ -53,36 +59,217 @@
         {% endif %}
 
         {% if missing %}
-            <h3>Missing Values</h3>
+            <h3>Missing Values in the file:</h3>
             {{ missing|safe }}
         {% endif %}
 
         {% if dtypes %}
-            <h3>Data Types</h3>
+            <h3>Data Types of the columns</h3>
             {{ dtypes|safe }}
         {% endif %}
 
         {% if stats %}
-            <h3>Statistics</h3>
+            <h3>Basic Statistics</h3>
             {{ stats|safe }}
-        {% endif %}
-
-        {% if processed %}
-            <h3>Processed Data</h3>
-            {{ processed|safe }}
-        {% endif %}
-
-        {% if insights %}
-        <h3>Insights</h3>
-        <ul>
-            {% for i in insights %}
-                <li>{{ i }}</li>
-            {% endfor %}
-        </ul>
         {% endif %}
     </div>
 </div>
+    <!--data cleaning-->
+    <div id="cleaning" class="content">
+        <div class="card">
+            <h2> Data cleaning & processing</h2>
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
 
+            <input type="file" name="file" hidden>
+
+            <h3>Handle Missing Values</h3>
+              {% if missing_info %}
+            <table>
+                <tr>
+                    <th>Column</th>
+                    <th>Missing</th>
+                    <th>Action</th>
+                </tr>
+
+                {% for col in missing_info %}
+                <tr>
+                    <td>{{ col.name }}</td>
+                    <td>{{ col.missing_count }}</td>
+
+                    <td>
+                        <select name="missing_{{ col.name }}">
+                            
+                            {% if col.type == "numeric" %}
+                                <option value="">how would you like to handle the missing values?</option>
+                                <option value="mean">Mean</option>
+                                <option value="median">Median</option>
+                                <option value="mode">Mode</option>
+                                <option value="unknown">Unknown</option>
+                                <option value="drop_row">Drop Rows</option>
+                                <option value="drop_col">Drop Column</option>
+                            {% else %}
+                                <option value="">how would you like to handle missing values?</option>
+                                <option value="mode">Mode</option>
+                                <option value="unknown">Unknown</option>
+                                <option value="drop_row">Drop Rows</option>
+                                <option value="drop_col">Drop Column</option>
+                            {% endif %}
+                        </select>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <h2>No missing values to handle!</h2>
+            {% endif %}
+            <hr>
+            <!-- EXTRA OPTIONS -->
+            <h3>Other Processing</h3>
+
+            <label>
+                <input type="checkbox" name="remove_duplicates">
+                Remove Duplicates
+            </label><br>
+
+            <label>
+                <input type="checkbox" name="encode">
+                Encode Categorical Data
+            </label><br>
+
+            <label>
+                <input type="checkbox" name="scale">
+                Scale Numeric Data
+            </label><br><br>
+
+            <button type="submit" name="action" value="clean" class="upload-btn">
+                Apply Cleaning
+            </button>
+        </form>
+
+        <!-- SHOW RESULTS -->
+        {% if steps %}
+        <h3>Steps Applied</h3>
+        <ul>
+            {% for step in steps %}
+                <li>{{ step }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if processed %}
+        <h3>Processed Data</h3>
+        {{ processed|safe }}
+        {% endif %}
+        </div>
+    </div>
+    <!-- FEATURE SELECTION -->
+    <div id="feature" class="content"> 
+    <div class="card">
+        <h2>Feature Selection (ANOVA)</h2> 
+
+        {% if columns %}
+        <form method="POST">
+            {% csrf_token %}
+
+            <input type="hidden" name="action" value="anova">
+
+            <label><b>Select Target Column:</b></label><br><br>
+
+            <select name="target" required>
+                <option value="">-- Select Target Column --</option>
+                {% for col in columns %}
+                    <option value="{{ col }}">{{ col }}</option>
+                {% endfor %}
+            </select>
+
+            <br><br>
+
+            <button type="submit" class="upload-btn">
+                Run ANOVA
+            </button>
+        </form>
+        {% else %}
+            <p>Please upload dataset first.</p>
+        {% endif %}
+
+        <hr>
+        <!-- RESULTS -->
+        {% if anova %}
+            <h3>ANOVA Results</h3>
+            {{ anova|safe }}
+        {% endif %}
+
+        {% if top_features %}
+            <h3>Important Features (p &lt; 0.05)</h3>
+            <ul>
+                {% for f in top_features %}
+                    <li>{{ f }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        </div>
+    </div>
+         <!-- PCA -->
+<div id="pca" class="content">
+    <div class="card">
+        <h2>PCA Analysis</h2>
+
+        {% if columns %}
+        <form method="POST">
+            {% csrf_token %}
+
+            <input type="hidden" name="action" value="pca">
+
+            <label><b>Number of Components:</b></label><br><br>
+            <input type="number" name="components" min="2" placeholder="Default = 2">
+
+            <br><br>
+
+            <button type="submit" class="upload-btn">
+                Run PCA
+            </button>
+        </form>
+        {% else %}
+            <p>Please upload dataset first.</p>
+        {% endif %}
+
+        <hr>
+
+        <!-- RESULTS -->
+        {% if pca %}
+            <h3>PCA Transformed Data</h3>
+            {{ pca|safe }}
+        {% endif %}
+
+        {% if variance %}
+            <h3>Explained Variance</h3>
+            <p>{{ variance }}</p>
+        {% endif %}
+
+        {% if pca_plot %}
+            <h3>PCA Visualization</h3>
+            <img src="data:image/png;base64,{{ pca_plot }}" style="width:100%;">
+        {% endif %}
+
+        </div>
+    </div>
+    <!-- Auto Insights -->
+<div id="insights" class="content">
+    <div class="card">
+        <h2>Auto Insights</h2>
+
+        {% if insights %}
+            <h3>Insights:</h3>
+            <ul>
+                {% for i in insights %}
+                    <li>{{ i }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+    </div>
+</div>       
     <!-- Visualization -->
     <div id="visualization" class="content">
     <div class="card">
@@ -99,30 +286,30 @@
         {% endif %}
     </div>
 </div>
-
 <script>
-function openTab(evt, tabId) {
-    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-
+function openTab(tabId, btn) {
+    // hide all sections
+    document.querySelectorAll('.content')
+        .forEach(el => el.classList.remove('active'));
+    // remove active from all buttons
+    document.querySelectorAll('.tab-btn')
+        .forEach(el => el.classList.remove('active'));
+    // show selected tab + highlight button
     document.getElementById(tabId).classList.add('active');
-    evt.currentTarget.classList.add('active');
+    btn.classList.add('active');
 }
-
-function toggleDropdown() {
-    document.getElementById("dropdown").classList.toggle("dropdown-open");
-}
-</script>
-<script>
-window.onload = function() {
-    {% if uploaded %}
-        document.getElementById("upload").classList.remove("active");
-        document.getElementById("summary").classList.add("active");
-
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-btn')[2].classList.add('active');
-
-        document.getElementById("dropdown").classList.add("dropdown-open");
+// run after page loads
+window.onload = () => {
+    {% if action == "upload" %}
+        openTab('summary', document.querySelectorAll('.tab-btn')[1]);
+    {% elif action == "clean" %}
+        openTab('cleaning', document.querySelectorAll('.tab-btn')[2]);
+    {% elif action == "anova" %}
+        openTab('feature', document.querySelectorAll('.tab-btn')[3]);
+    {% elif action == "pca" %}
+        openTab('pca', document.querySelectorAll('.tab-btn')[4]);
+    {% elif action == "insights" %}
+        openTab('insights', document.querySelectorAll('.tab-btn')[5]);
     {% endif %}
 };
 </script>

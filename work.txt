@@ -61,3 +61,7 @@ Pending Issues / To Be Fixed
 Uploaded file name is not being displayed.
 Tables are showing misleading or inconsistent data.
 Download functionality needs to be implemented.
+
+11 March and 12 March:
+Changed the sidebar layout,I added more features, Had to make major
+changes in backend and some changes frontend too.
