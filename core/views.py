@@ -4,10 +4,15 @@ from django.http import HttpResponse
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.feature_selection import f_classif
 from sklearn.decomposition import PCA
+
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet
 import io,base64
+from io import BytesIO
 
 # function to read file
 def read_file(file):
@@ -249,6 +254,137 @@ def generate_insights(df):
 
     return insights
 
+#function for graphs
+def generate_visualizations(df):
+    plots = {}
+
+    # HISTOGRAM (first numeric column)
+    num_cols = df.select_dtypes(include=['number']).columns
+    cat_cols = df.select_dtypes(include=['object']).columns
+    
+    histograms = []
+
+    for col in num_cols[:5]:
+        plt.figure()
+        df[col].hist()
+        plt.title(f"Histogram of {col}")
+
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png')
+        buffer.seek(0)
+
+        histograms.append(base64.b64encode(buffer.getvalue()).decode())
+
+        buffer.close()
+        plt.close()
+
+    plots['histograms'] = histograms
+
+    #box plots
+    boxplots = []
+
+    for col in num_cols[:5]:
+        plt.figure()
+        sns.boxplot(x=df[col])
+        plt.title(f"Boxplot of {col}")
+
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png')
+        buffer.seek(0)
+
+        boxplots.append(base64.b64encode(buffer.getvalue()).decode())
+
+        buffer.close()
+        plt.close()
+
+    plots['boxplots'] = boxplots
+    #count pots
+    countplots = []
+
+    for col in cat_cols[:3]:
+        plt.figure()
+        df[col].value_counts().plot(kind='bar')
+        plt.title(f"Count Plot of {col}")
+
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png')
+        buffer.seek(0)
+
+        countplots.append(base64.b64encode(buffer.getvalue()).decode())
+
+        buffer.close()
+        plt.close()
+
+    plots['countplots'] = countplots
+    #heatmap 
+    if len(num_cols) > 1:
+        plt.figure()
+        corr = df.corr(numeric_only=True)
+        sns.heatmap(corr, annot=True, cmap="coolwarm")
+
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png')
+        buffer.seek(0)
+
+        plots['heatmap'] = base64.b64encode(buffer.getvalue()).decode()
+
+        buffer.close()
+        plt.close()
+
+    return plots
+
+# function for downloading 
+def create_pdf_report(df, insights, plots):
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(buffer)
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    # Title
+    elements.append(Paragraph("Excel Insights Report", styles['Title']))
+    elements.append(Spacer(1, 10))
+
+    # Dataset info
+    elements.append(Paragraph(f"Rows: {df.shape[0]}, Columns: {df.shape[1]}", styles['Normal']))
+    elements.append(Spacer(1, 10))
+
+    # Insights
+    elements.append(Paragraph("Insights:", styles['Heading2']))
+    for ins in insights:
+        elements.append(Paragraph(f"- {ins}", styles['Normal']))
+    elements.append(Spacer(1, 15))
+
+    # Add plots
+    def add_images(image_list, title):
+        elements.append(Paragraph(title, styles['Heading2']))
+        for img in image_list[:3]:  # limit for PDF size
+            img_data = base64.b64decode(img)
+            img_buffer = BytesIO(img_data)
+            elements.append(Image(img_buffer, width=400, height=300))
+            elements.append(Spacer(1, 10))
+
+    if 'histograms' in plots:
+        add_images(plots['histograms'], "Histograms")
+
+    if 'boxplots' in plots:
+        add_images(plots['boxplots'], "Boxplots")
+
+    if 'countplots' in plots:
+        add_images(plots['countplots'], "Count Plots")
+
+    if 'heatmap' in plots:
+        elements.append(Paragraph("Correlation Heatmap", styles['Heading2']))
+        img_data = base64.b64decode(plots['heatmap'])
+        img_buffer = BytesIO(img_data)
+        elements.append(Image(img_buffer, width=400, height=300))
+
+    doc.build(elements)
+
+    buffer.seek(0)
+    return buffer
+
 def home(request):
     context={'uploaded': False}
 
@@ -258,7 +394,9 @@ def home(request):
         context['columns'] = list(df.columns)
         context['uploaded'] = True
         context['missing_info'] = missing_vals(df)
-
+        context['insights'] = generate_insights(df)
+        plots = generate_visualizations(df)
+        context.update(plots)
     if request.method=='POST':
         action = request.POST.get("action")
         context['action'] = action
@@ -276,6 +414,8 @@ def home(request):
 
                 summary=basic_summary(df)
                 context.update(summary)
+                plots = generate_visualizations(df)
+                context.update(plots)
                 context['missing_info']=missing_vals(df)
                 context['insights'] = generate_insights(df)
                 context['uploaded']=True
@@ -298,6 +438,8 @@ def home(request):
             
             summary = basic_summary(df_processed)
             context.update(summary)
+            plots = generate_visualizations(df_processed)
+            context.update(plots)
             context['missing_info'] = missing_vals(df_processed)
             context['uploaded'] = True
         #feature selection section
@@ -371,6 +513,25 @@ def home(request):
 
     return render(request,'home.html',context)
 
+# download the grpahs and insights
+def download_report(request):
+    data = request.session.get('data')
+
+    if not data:
+        return HttpResponse("No dataset available")
+
+    df = pd.DataFrame(data)
+
+    insights = generate_insights(df)
+    plots = generate_visualizations(df)
+
+    pdf_buffer = create_pdf_report(df, insights, plots)
+
+    response = HttpResponse(pdf_buffer, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="report.pdf"'
+
+    return response
+# download processed data 
 def download_file(request):
     data = request.session.get('processed_data')
 

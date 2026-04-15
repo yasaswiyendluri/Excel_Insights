@@ -65,3 +65,7 @@ Download functionality needs to be implemented.
 11 March and 12 March:
 Changed the sidebar layout,I added more features, Had to make major
 changes in backend and some changes frontend too.
+
+14 March:
+Added graphs part and added the download buttons.
+Made changes in auto insights and cleaning part due to irrelevant data outputs.

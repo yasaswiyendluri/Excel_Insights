@@ -161,6 +161,9 @@
         <h3>Processed Data</h3>
         {{ processed|safe }}
         {% endif %}
+        <form method="GET" action="{% url 'download_file' %}">
+            <button class="upload-btn">Download Processed Data (CSV)</button>
+        </form>
         </div>
     </div>
     <!-- FEATURE SELECTION -->
@@ -275,17 +278,40 @@
     <div class="card">
         <h2>Data Visualization</h2>
 
-        {% if histogram %}
-            <h3>Histogram</h3>
-            <img src="data:image/png;base64,{{ histogram }}" style="width:100%;">
+        <!-- HISTOGRAMS -->
+        {% if histograms %}
+            <h3>Histograms</h3>
+            {% for img in histograms %}
+                <img src="data:image/png;base64,{{ img }}" style="width:100%; margin-bottom:20px;">
+            {% endfor %}
         {% endif %}
 
+        <!-- BOXPLOTS -->
+        {% if boxplots %}
+            <h3>Boxplots (Outliers)</h3>
+            {% for img in boxplots %}
+                <img src="data:image/png;base64,{{ img }}" style="width:100%; margin-bottom:20px;">
+            {% endfor %}
+        {% endif %}
+
+        <!-- COUNT PLOTS -->
+        {% if countplots %}
+            <h3>Categorical Distributions</h3>
+            {% for img in countplots %}
+                <img src="data:image/png;base64,{{ img }}" style="width:100%; margin-bottom:20px;">
+            {% endfor %}
+        {% endif %}
+
+        <!-- HEATMAP -->
         {% if heatmap %}
             <h3>Correlation Heatmap</h3>
             <img src="data:image/png;base64,{{ heatmap }}" style="width:100%;">
         {% endif %}
+        <form method="GET" action="{% url 'download_report' %}">
+    <button class="upload-btn">Download Full Report (PDF)</button>
+    </form>
+        </div>
     </div>
-</div>
 <script>
 function openTab(tabId, btn) {
     // hide all sections
@@ -310,6 +336,8 @@ window.onload = () => {
         openTab('pca', document.querySelectorAll('.tab-btn')[4]);
     {% elif action == "insights" %}
         openTab('insights', document.querySelectorAll('.tab-btn')[5]);
+    {% elif histograms %}
+    openTab('visualization', document.querySelectorAll('.tab-btn')[6]);
     {% endif %}
 };
 </script>
