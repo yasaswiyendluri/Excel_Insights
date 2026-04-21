@@ -1,345 +1,297 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
-    <head>
+<head>
     <meta charset="UTF-8">
     <title>Excel Insights</title>
-    <!--linking the css part-->
-
     <link rel="stylesheet" href="{% static 'members/style.css' %}">
+    <link rel="stylesheet" href="{% static 'members/summary_styles.css' %}">
+
+    <style>
+        /* File upload confirmation */
+        .file-selected {
+            color: #4CAF50 !important;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-    <!--sidebar-->
-<div class="sidebar">
-    <h2>Excel Insights</h2>
+    <div class="sidebar">
+        <h2>Excel Insights</h2>
+        <button class="tab-btn active" onclick="openTab('upload', this)">Upload</button>
+        <button class="tab-btn" onclick="openTab('summary', this)">Basic Summary</button>
+        <button class="tab-btn" onclick="openTab('cleaning', this)">Data Cleaning & Processing</button>
+        <button class="tab-btn" onclick="openTab('feature', this)">Feature Selection</button>
+        <button class="tab-btn" onclick="openTab('pca', this)">PCA Analysis</button>
+        <button class="tab-btn" onclick="openTab('insights', this)">Auto Insights</button>
+        <button class="tab-btn" onclick="openTab('visualization', this)">Data Visualization</button>
+    </div>
 
-    <button class="tab-btn active" onclick="openTab('upload', this)">Upload</button>
+    <div class="main">
 
-    <button class="tab-btn" onclick="openTab('summary', this)">Basic Summary</button>
-
-    <button class="tab-btn" onclick="openTab('cleaning', this)">Data Cleaning & Processing</button>
-
-    <button class="tab-btn" onclick="openTab('feature', this)">Feature Selection</button>
-
-    <button class="tab-btn" onclick="openTab('pca', this)">PCA Analysis</button>
-
-    <button class="tab-btn" onclick="openTab('insights', this)">Auto Insights</button>
-
-    <button class="tab-btn" onclick="openTab('visualization', this)">Data Visualization</button>
-</div>
-<!--main page-->
-<div class="main">
-
-    <div id="upload" class="content active">
-        <div class="card">
-            <h2>Upload Excel File</h2>
-
-            <form method="POST" enctype="multipart/form-data">
-                {% csrf_token %}
-                <div class="upload-box" onclick="document.getElementById('fileInput').click()">
-                    <span class="file-label" id="fileLabel">Drop file or click to upload</span>
+        <!-- ── UPLOAD ───────────────────────────────────────────── -->
+        <div id="upload" class="content active">
+            <div class="card">
+                <h2>Upload Excel File</h2>
+                <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                    {% csrf_token %}
+                    <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+                        <span class="file-label" id="fileLabel">Drop file or click to upload</span>
+                    </div>
+                    <input type="file" id="fileInput" name="file" required onchange="handleFileSelect()">
+                    <div id="fileNameDisplay" style="margin-top:10px; text-align:center; font-weight:bold; color:#666; display:none;">
+                        Selected: <span id="selectedFileName" class="file-selected"></span>
+                    </div>
+                    <button type="submit" name="action" value="upload" class="upload-btn" style="margin-top:15px;">UPLOAD</button>
+                </form>
+                {% if filename %}
+                <div style="margin-top:20px; padding:10px; background-color:#e8f5e9; border-radius:4px; text-align:center;">
+                    <p style="color:#2e7d32; font-weight:bold;">✅ Currently working with:</p>
+                    <p style="color:#1976d2; font-size:14px;">{{ filename }}</p>
                 </div>
-                    <input type="file" id="fileInput" name="file" required>
-
-                <button type="submit" name="action" value="upload" class="upload-btn">UPLOAD</button>
-            </form>
+                {% endif %}
+            </div>
         </div>
-    </div>
-    {% if error %}
-    <p style="color:red;">{{ error }}</p>
-    {% endif %}
-    <!-- Summary -->
-    <div id="summary" class="content">
-    <div class="card">
-        <h2>Data Summary</h2>
-        
-        {% if tables %}
-            <h3>Original Data</h3>
-            {{ tables|safe }}
+
+        {% if error %}
+        <p style="color:red; padding:10px; background-color:#ffebee; border-radius:4px;">❌ {{ error }}</p>
         {% endif %}
 
-        {% if missing %}
-            <h3>Missing Values in the file:</h3>
-            {{ missing|safe }}
-        {% endif %}
+        <!-- ── BASIC SUMMARY ─────────────────────────────────────── -->
+        <div id="summary" class="content">
+            <div class="card">
+                <h2>Data Summary</h2>
 
-        {% if dtypes %}
-            <h3>Data Types of the columns</h3>
-            {{ dtypes|safe }}
-        {% endif %}
+                {% if data_summary %}
+                    {{ data_summary|safe }}
+                {% endif %}
 
-        {% if stats %}
-            <h3>Basic Statistics</h3>
-            {{ stats|safe }}
-        {% endif %}
-    </div>
-</div>
-    <!--data cleaning-->
-    <div id="cleaning" class="content">
-        <div class="card">
-            <h2> Data cleaning & processing</h2>
-        <form method="POST" enctype="multipart/form-data">
-            {% csrf_token %}
+                {% if tables %}
+                    <h3 class="sum-section-title" style="margin-top:28px;">Original Data (First 5 Rows)</h3>
+                    <div style="overflow-x:auto;">{{ tables|safe }}</div>
+                {% endif %}
 
-            <input type="file" name="file" hidden>
+                {% if missing %}
+                    <h3 class="sum-section-title">Missing Values</h3>
+                    {{ missing|safe }}
+                {% endif %}
 
-            <h3>Handle Missing Values</h3>
-              {% if missing_info %}
-            <table>
-                <tr>
-                    <th>Column</th>
-                    <th>Missing</th>
-                    <th>Action</th>
-                </tr>
+                {% if dtypes %}
+                    <h3 class="sum-section-title">Column Data Types</h3>
+                    {{ dtypes|safe }}
+                {% endif %}
 
-                {% for col in missing_info %}
-                <tr>
-                    <td>{{ col.name }}</td>
-                    <td>{{ col.missing_count }}</td>
+                {% if stats %}
+                    <h3 class="sum-section-title">Basic Statistics</h3>
+                    {{ stats|safe }}
+                {% endif %}
+            </div>
+        </div>
 
-                    <td>
-                        <select name="missing_{{ col.name }}">
-                            
-                            {% if col.type == "numeric" %}
-                                <option value="">how would you like to handle the missing values?</option>
-                                <option value="mean">Mean</option>
-                                <option value="median">Median</option>
-                                <option value="mode">Mode</option>
-                                <option value="unknown">Unknown</option>
-                                <option value="drop_row">Drop Rows</option>
-                                <option value="drop_col">Drop Column</option>
-                            {% else %}
-                                <option value="">how would you like to handle missing values?</option>
-                                <option value="mode">Mode</option>
-                                <option value="unknown">Unknown</option>
-                                <option value="drop_row">Drop Rows</option>
-                                <option value="drop_col">Drop Column</option>
-                            {% endif %}
-                        </select>
-                    </td>
-                </tr>
-                {% endfor %}
-            </table>
-            {% else %}
-            <h2>No missing values to handle!</h2>
+        <!-- ── DATA CLEANING ─────────────────────────────────────── -->
+        <div id="cleaning" class="content">
+            <div class="card">
+                <h2>Data cleaning & processing</h2>
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="file" name="file" hidden>
+                    <h3>Handle Missing Values</h3>
+                    {% if missing_info %}
+                    <table>
+                        <tr>
+                            <th>Column</th>
+                            <th>Missing</th>
+                            <th>Action</th>
+                        </tr>
+                        {% for col in missing_info %}
+                        <tr>
+                            <td>{{ col.name }}</td>
+                            <td>{{ col.missing_count }}</td>
+                            <td>
+                                <select name="missing_{{ col.name }}">
+                                    {% if col.type == "numeric" %}
+                                        <option value="">Handle missing values...</option>
+                                        <option value="mean">Mean</option>
+                                        <option value="median">Median</option>
+                                        <option value="mode">Mode</option>
+                                        <option value="unknown">Unknown</option>
+                                        <option value="drop_row">Drop Rows</option>
+                                        <option value="drop_col">Drop Column</option>
+                                    {% else %}
+                                        <option value="">Handle missing values...</option>
+                                        <option value="mode">Mode</option>
+                                        <option value="unknown">Unknown</option>
+                                        <option value="drop_row">Drop Rows</option>
+                                        <option value="drop_col">Drop Column</option>
+                                    {% endif %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                    {% else %}
+                    <h2>No missing values to handle!</h2>
+                    {% endif %}
+
+                    <hr>
+                    <h3>Other Processing</h3>
+                    <label><input type="checkbox" name="remove_duplicates"> Remove Duplicates</label><br>
+                    <label><input type="checkbox" name="encode"> Encode Categorical Data</label><br>
+                    <label><input type="checkbox" name="scale"> Scale Numeric Data</label><br><br>
+                    <button type="submit" name="action" value="clean" class="upload-btn">Apply Cleaning</button>
+                </form>
+                {% if steps %}
+                <h3>Steps Applied</h3>
+                <ul>{% for step in steps %}<li>{{ step }}</li>{% endfor %}</ul>
+                {% endif %}
+                {% if processed %}
+                <h3>Processed Data Preview</h3>
+                {{ processed|safe }}
+                <form method="GET" action="{% url 'download_file' %}">
+                    <button class="upload-btn">Download Processed Data (CSV)</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ── FEATURE SELECTION ─────────────────────────────────── -->
+        <div id="feature" class="content">
+            <div class="card">
+                <h2>Feature Selection (ANOVA)</h2>
+                {% if columns %}
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="anova">
+                    <label><b>Select Target Column:</b></label><br><br>
+                    <select name="target" required>
+                        <option value="">-- Select Target Column --</option>
+                        {% for col in columns %}<option value="{{ col }}">{{ col }}</option>{% endfor %}
+                    </select><br><br>
+                    <button type="submit" class="upload-btn">Run ANOVA</button>
+                </form>
+                {% else %}
+                <p>Please upload dataset first.</p>
+                {% endif %}
+                <hr>
+                {% if anova %}
+                    <h3>ANOVA Results</h3>
+                    {{ anova|safe }}
+                {% endif %}
+                {% if top_features %}
+                    <h3>Important Features (p &lt; 0.05)</h3>
+                    <ul>{% for f in top_features %}<li>{{ f }}</li>{% endfor %}</ul>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ── PCA ───────────────────────────────────────────────── -->
+        <div id="pca" class="content">
+            <div class="card">
+                <h2>PCA Analysis</h2>
+                {% if columns %}
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="pca">
+                    <label><b>Number of Components:</b></label><br><br>
+                    <input type="number" name="components" min="2" placeholder="Default = 2"><br><br>
+                    <button type="submit" class="upload-btn">Run PCA</button>
+                </form>
+                {% else %}
+                <p>Please upload dataset first.</p>
+                {% endif %}
+                <hr>
+                {% if pca %}
+                    <h3>PCA Transformed Data</h3>
+                    {{ pca|safe }}
+                {% endif %}
+                {% if variance %}
+                    <h3>Explained Variance</h3>
+                    <p><b>{{ variance }}</b></p>
+                {% endif %}
+                {% if pca_plot %}
+                    <h3>PCA Visualization</h3>
+                    <img src="data:image/png;base64,{{ pca_plot }}" style="width:100%; max-width:800px; border:1px solid #ccc; border-radius:5px;">
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ── AUTO INSIGHTS ─────────────────────────────────────── -->
+        <div id="insights" class="content">
+            <div class="card">
+                <h2>Auto Insights</h2>
+                {% if insights %}
+                    <h3>Key Findings:</h3>
+                    <ul>
+                        {% for i in insights %}
+                            <li style="margin-bottom:8px;">{{ i }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Upload a dataset to generate insights.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ── VISUALIZATION ─────────────────────────────────────── -->
+        <div id="visualization" class="content">
+            <div class="card">
+                <h2>Data Visualization</h2>
+                {% if histograms %}
+                    <h3>Distribution Histograms</h3>
+                    {% for img in histograms %}
+                        <div style="margin-bottom:30px; border:1px solid #e0e0e0; padding:10px; border-radius:5px; background:white;">
+                            <img src="data:image/png;base64,{{ img }}" style="width:100%; max-width:900px;">
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                {% if heatmap %}
+                    <h3>Correlation Heatmap</h3>
+                    <div style="border:1px solid #e0e0e0; padding:10px; border-radius:5px; background:#ffffff;">
+                        <img src="data:image/png;base64,{{ heatmap }}" style="width:100%; max-width:1000px;">
+                    </div>
+                {% endif %}
+                <hr style="margin:30px 0;">
+                <form method="GET" action="{% url 'download_report' %}">
+                    <button class="upload-btn"> Download Full Report (PDF)</button>
+                </form>
+            </div>
+        </div>
+
+    </div><!-- /main -->
+
+    <script>
+        function handleFileSelect() {
+            const fi = document.getElementById('fileInput');
+            const display = document.getElementById('fileNameDisplay');
+            const name = document.getElementById('selectedFileName');
+            if (fi.files && fi.files[0]) {
+                name.textContent = fi.files[0].name;
+                display.style.display = 'block';
+            }
+        }
+
+        function openTab(tabId, btn) {
+            document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        window.onload = () => {
+            {% if action == "upload" %}
+                openTab('summary', document.querySelectorAll('.tab-btn')[1]);
+            {% elif action == "clean" %}
+                openTab('cleaning', document.querySelectorAll('.tab-btn')[2]);
+            {% elif action == "anova" %}
+                openTab('feature', document.querySelectorAll('.tab-btn')[3]);
+            {% elif action == "pca" %}
+                openTab('pca', document.querySelectorAll('.tab-btn')[4]);
+            {% elif action == "insights" %}
+                openTab('insights', document.querySelectorAll('.tab-btn')[5]);
+            {% elif histograms %}
+                openTab('visualization', document.querySelectorAll('.tab-btn')[6]);
             {% endif %}
-            <hr>
-            <!-- EXTRA OPTIONS -->
-            <h3>Other Processing</h3>
-
-            <label>
-                <input type="checkbox" name="remove_duplicates">
-                Remove Duplicates
-            </label><br>
-
-            <label>
-                <input type="checkbox" name="encode">
-                Encode Categorical Data
-            </label><br>
-
-            <label>
-                <input type="checkbox" name="scale">
-                Scale Numeric Data
-            </label><br><br>
-
-            <button type="submit" name="action" value="clean" class="upload-btn">
-                Apply Cleaning
-            </button>
-        </form>
-
-        <!-- SHOW RESULTS -->
-        {% if steps %}
-        <h3>Steps Applied</h3>
-        <ul>
-            {% for step in steps %}
-                <li>{{ step }}</li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-
-        {% if processed %}
-        <h3>Processed Data</h3>
-        {{ processed|safe }}
-        {% endif %}
-        <form method="GET" action="{% url 'download_file' %}">
-            <button class="upload-btn">Download Processed Data (CSV)</button>
-        </form>
-        </div>
-    </div>
-    <!-- FEATURE SELECTION -->
-    <div id="feature" class="content"> 
-    <div class="card">
-        <h2>Feature Selection (ANOVA)</h2> 
-
-        {% if columns %}
-        <form method="POST">
-            {% csrf_token %}
-
-            <input type="hidden" name="action" value="anova">
-
-            <label><b>Select Target Column:</b></label><br><br>
-
-            <select name="target" required>
-                <option value="">-- Select Target Column --</option>
-                {% for col in columns %}
-                    <option value="{{ col }}">{{ col }}</option>
-                {% endfor %}
-            </select>
-
-            <br><br>
-
-            <button type="submit" class="upload-btn">
-                Run ANOVA
-            </button>
-        </form>
-        {% else %}
-            <p>Please upload dataset first.</p>
-        {% endif %}
-
-        <hr>
-        <!-- RESULTS -->
-        {% if anova %}
-            <h3>ANOVA Results</h3>
-            {{ anova|safe }}
-        {% endif %}
-
-        {% if top_features %}
-            <h3>Important Features (p &lt; 0.05)</h3>
-            <ul>
-                {% for f in top_features %}
-                    <li>{{ f }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-        </div>
-    </div>
-         <!-- PCA -->
-<div id="pca" class="content">
-    <div class="card">
-        <h2>PCA Analysis</h2>
-
-        {% if columns %}
-        <form method="POST">
-            {% csrf_token %}
-
-            <input type="hidden" name="action" value="pca">
-
-            <label><b>Number of Components:</b></label><br><br>
-            <input type="number" name="components" min="2" placeholder="Default = 2">
-
-            <br><br>
-
-            <button type="submit" class="upload-btn">
-                Run PCA
-            </button>
-        </form>
-        {% else %}
-            <p>Please upload dataset first.</p>
-        {% endif %}
-
-        <hr>
-
-        <!-- RESULTS -->
-        {% if pca %}
-            <h3>PCA Transformed Data</h3>
-            {{ pca|safe }}
-        {% endif %}
-
-        {% if variance %}
-            <h3>Explained Variance</h3>
-            <p>{{ variance }}</p>
-        {% endif %}
-
-        {% if pca_plot %}
-            <h3>PCA Visualization</h3>
-            <img src="data:image/png;base64,{{ pca_plot }}" style="width:100%;">
-        {% endif %}
-
-        </div>
-    </div>
-    <!-- Auto Insights -->
-<div id="insights" class="content">
-    <div class="card">
-        <h2>Auto Insights</h2>
-
-        {% if insights %}
-            <h3>Insights:</h3>
-            <ul>
-                {% for i in insights %}
-                    <li>{{ i }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-
-    </div>
-</div>       
-    <!-- Visualization -->
-    <div id="visualization" class="content">
-    <div class="card">
-        <h2>Data Visualization</h2>
-
-        <!-- HISTOGRAMS -->
-        {% if histograms %}
-            <h3>Histograms</h3>
-            {% for img in histograms %}
-                <img src="data:image/png;base64,{{ img }}" style="width:100%; margin-bottom:20px;">
-            {% endfor %}
-        {% endif %}
-
-        <!-- BOXPLOTS -->
-        {% if boxplots %}
-            <h3>Boxplots (Outliers)</h3>
-            {% for img in boxplots %}
-                <img src="data:image/png;base64,{{ img }}" style="width:100%; margin-bottom:20px;">
-            {% endfor %}
-        {% endif %}
-
-        <!-- COUNT PLOTS -->
-        {% if countplots %}
-            <h3>Categorical Distributions</h3>
-            {% for img in countplots %}
-                <img src="data:image/png;base64,{{ img }}" style="width:100%; margin-bottom:20px;">
-            {% endfor %}
-        {% endif %}
-
-        <!-- HEATMAP -->
-        {% if heatmap %}
-            <h3>Correlation Heatmap</h3>
-            <img src="data:image/png;base64,{{ heatmap }}" style="width:100%;">
-        {% endif %}
-        <form method="GET" action="{% url 'download_report' %}">
-    <button class="upload-btn">Download Full Report (PDF)</button>
-    </form>
-        </div>
-    </div>
-<script>
-function openTab(tabId, btn) {
-    // hide all sections
-    document.querySelectorAll('.content')
-        .forEach(el => el.classList.remove('active'));
-    // remove active from all buttons
-    document.querySelectorAll('.tab-btn')
-        .forEach(el => el.classList.remove('active'));
-    // show selected tab + highlight button
-    document.getElementById(tabId).classList.add('active');
-    btn.classList.add('active');
-}
-// run after page loads
-window.onload = () => {
-    {% if action == "upload" %}
-        openTab('summary', document.querySelectorAll('.tab-btn')[1]);
-    {% elif action == "clean" %}
-        openTab('cleaning', document.querySelectorAll('.tab-btn')[2]);
-    {% elif action == "anova" %}
-        openTab('feature', document.querySelectorAll('.tab-btn')[3]);
-    {% elif action == "pca" %}
-        openTab('pca', document.querySelectorAll('.tab-btn')[4]);
-    {% elif action == "insights" %}
-        openTab('insights', document.querySelectorAll('.tab-btn')[5]);
-    {% elif histograms %}
-    openTab('visualization', document.querySelectorAll('.tab-btn')[6]);
-    {% endif %}
-};
-</script>
+        };
+    </script>
 </body>
 </html>

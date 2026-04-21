@@ -1,0 +1,181 @@
+/* ===== SUMMARY SECTION - MATCHING OTHER TABS ===== */
+/* Remove all old summary card styles and replace with unified look */
+
+.summary-card,
+.overview-card,
+.domain-card,
+.feature-card {
+    all: unset;
+    display: block;
+}
+
+.summary-section-header {
+    all: unset;
+    display: block;
+}
+
+/* Dataset Overview Grid */
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.stat-item {
+    background: #1e1e2e;
+    border: 1px solid #2a2a3d;
+    border-radius: 6px;
+    padding: 14px 12px;
+    text-align: center;
+}
+
+.stat-label {
+    display: block;
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 6px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.quality-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white !important;
+}
+
+/* Section headers (match "Handle Missing Values" style) */
+.sum-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #4CAF50;
+    margin: 24px 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2a2a3d;
+}
+
+/* Age stats row */
+.age-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.age-cell {
+    background: #1e1e2e;
+    border: 1px solid #2a2a3d;
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+}
+
+.age-cell-label {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+
+.age-cell-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #4CAF50;
+}
+
+/* Feature accordion rows (like the column/missing table) */
+.feature-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid #2a2a3d;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.feature-row:hover {
+    background: #1e1e2e;
+}
+
+.feature-row:last-child {
+    border-bottom: none;
+}
+
+.feature-col-name {
+    font-size: 13px;
+    color: #4CAF50;
+    font-weight: 500;
+}
+
+.feature-col-meta {
+    font-size: 12px;
+    color: #888;
+}
+
+.feature-collapse {
+    border: 1px solid #2a2a3d;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    overflow: hidden;
+}
+
+.feature-collapse-body {
+    display: none;
+    padding: 12px;
+    background: #111120;
+}
+
+.feature-collapse.open .feature-collapse-body {
+    display: block;
+}
+
+.feature-collapse.open .feature-row {
+    background: #1e1e2e;
+    border-bottom: 1px solid #2a2a3d;
+}
+
+/* Numeric mini-grid inside feature */
+.num-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+}
+
+.num-mini-cell {
+    background: #1a1a2e;
+    border-radius: 4px;
+    padding: 8px;
+    text-align: center;
+}
+
+.num-mini-label {
+    font-size: 10px;
+    color: #666;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.num-mini-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4fc3f7;
+}
+
+@media (max-width: 768px) {
+    .overview-grid { grid-template-columns: repeat(2, 1fr); }
+    .age-row { grid-template-columns: repeat(2, 1fr); }
+    .num-mini-grid { grid-template-columns: repeat(3, 1fr); }
+}
