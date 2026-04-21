@@ -16,11 +16,21 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from core.views import home, download_file,download_report
+from core.views import (
+    home,
+    download_file,
+    download_report,
+    download_basic_stats,
+    download_selected_features,
+    download_pca,
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', home, name='home'),
     path('download/', download_file, name='download_file'),
     path('download_report/',download_report,name='download_report'),
+    path('download_basic_stats/', download_basic_stats, name='download_basic_stats'),
+    path('download_selected_features/', download_selected_features, name='download_selected_features'),
+    path('download_pca/', download_pca, name='download_pca'),
 ]

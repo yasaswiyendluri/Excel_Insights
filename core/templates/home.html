@@ -23,7 +23,7 @@
         <button class="tab-btn" onclick="openTab('cleaning', this)">Data Cleaning & Processing</button>
         <button class="tab-btn" onclick="openTab('feature', this)">Feature Selection</button>
         <button class="tab-btn" onclick="openTab('pca', this)">PCA Analysis</button>
-        <button class="tab-btn" onclick="openTab('insights', this)">Auto Insights</button>
+        <button class="tab-btn" onclick="openTab('insights', this)">Insights</button>
         <button class="tab-btn" onclick="openTab('visualization', this)">Data Visualization</button>
     </div>
 
@@ -82,7 +82,12 @@
                 {% endif %}
 
                 {% if stats %}
-                    <h3 class="sum-section-title">Basic Statistics</h3>
+                    <h3 class="sum-section-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                        <span>Basic Statistics</span>
+                        <a href="{% url 'download_basic_stats' %}" style="font-size:12px; text-decoration:none; color:#1976d2; border:1px solid #1976d2; border-radius:3px; padding:2px 6px;">
+                            [csv]
+                        </a>
+                    </h3>
                     {{ stats|safe }}
                 {% endif %}
             </div>
@@ -165,8 +170,21 @@
                     <label><b>Select Target Column:</b></label><br><br>
                     <select name="target" required>
                         <option value="">-- Select Target Column --</option>
-                        {% for col in columns %}<option value="{{ col }}">{{ col }}</option>{% endfor %}
+                        {% for col in columns %}
+                            <option value="{{ col }}" {% if target_col == col %}selected{% endif %}>{{ col }}</option>
+                        {% endfor %}
                     </select><br><br>
+
+                    <label><b>Number of Features to Select:</b></label><br><br>
+                    <input
+                        type="number"
+                        name="feature_count"
+                        min="1"
+                        max="{{ columns|length|add:'-1' }}"
+                        placeholder="Leave empty to select all ranked features"
+                        value="{{ selected_count|default:'' }}"
+                    ><br><br>
+
                     <button type="submit" class="upload-btn">Run ANOVA</button>
                 </form>
                 {% else %}
@@ -175,11 +193,17 @@
                 <hr>
                 {% if anova %}
                     <h3>ANOVA Results</h3>
+                    {% if target_col %}
+                        <p>Target column used: <b>{{ target_col }}</b></p>
+                    {% endif %}
                     {{ anova|safe }}
                 {% endif %}
-                {% if top_features %}
-                    <h3>Important Features (p &lt; 0.05)</h3>
-                    <ul>{% for f in top_features %}<li>{{ f }}</li>{% endfor %}</ul>
+                {% if selected_head %}
+                    <h3>Head of Top {{ selected_count }} Selected Columns</h3>
+                    {{ selected_head|safe }}
+                    <form method="GET" action="{% url 'download_selected_features' %}" style="margin-top:10px;">
+                        <button class="upload-btn" type="submit">Download Selected Features (CSV)</button>
+                    </form>
                 {% endif %}
             </div>
         </div>
@@ -212,13 +236,18 @@
                     <h3>PCA Visualization</h3>
                     <img src="data:image/png;base64,{{ pca_plot }}" style="width:100%; max-width:800px; border:1px solid #ccc; border-radius:5px;">
                 {% endif %}
+                {% if pca %}
+                    <form method="GET" action="{% url 'download_pca' %}" style="margin-top:10px;">
+                        <button class="upload-btn" type="submit">Download PCA Data (CSV)</button>
+                    </form>
+                {% endif %}
             </div>
         </div>
 
-        <!-- ── AUTO INSIGHTS ─────────────────────────────────────── -->
+        <!-- ── INSIGHTS ──────────────────────────────────────────── -->
         <div id="insights" class="content">
             <div class="card">
-                <h2>Auto Insights</h2>
+                <h2>Insights</h2>
                 {% if insights %}
                     <h3>Key Findings:</h3>
                     <ul>
@@ -236,9 +265,23 @@
         <div id="visualization" class="content">
             <div class="card">
                 <h2>Data Visualization</h2>
+                {% if not histograms and not scatterplots and not heatmap %}
+                    <p>Upload a dataset with numeric columns to generate visualizations.</p>
+                {% endif %}
                 {% if histograms %}
                     <h3>Distribution Histograms</h3>
                     {% for img in histograms %}
+                        <div style="margin-bottom:30px; border:1px solid #e0e0e0; padding:10px; border-radius:5px; background:white;">
+                            <img src="data:image/png;base64,{{ img }}" style="width:100%; max-width:900px;">
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                {% if scatterplots %}
+                    <h3>Scatter Plots</h3>
+                    <p style="margin:6px 0 16px; color:#666; font-size:14px;">
+                        Top correlated feature pairs (auto-selected for clarity)
+                    </p>
+                    {% for img in scatterplots %}
                         <div style="margin-bottom:30px; border:1px solid #e0e0e0; padding:10px; border-radius:5px; background:white;">
                             <img src="data:image/png;base64,{{ img }}" style="width:100%; max-width:900px;">
                         </div>
@@ -288,8 +331,8 @@
                 openTab('pca', document.querySelectorAll('.tab-btn')[4]);
             {% elif action == "insights" %}
                 openTab('insights', document.querySelectorAll('.tab-btn')[5]);
-            {% elif histograms %}
-                openTab('visualization', document.querySelectorAll('.tab-btn')[6]);
+            {% else %}
+                openTab('upload', document.querySelectorAll('.tab-btn')[0]);
             {% endif %}
         };
     </script>
