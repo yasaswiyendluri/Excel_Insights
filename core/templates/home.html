@@ -232,10 +232,7 @@
                     <h3>Explained Variance</h3>
                     <p><b>{{ variance }}</b></p>
                 {% endif %}
-                {% if pca_plot %}
-                    <h3>PCA Visualization</h3>
-                    <img src="data:image/png;base64,{{ pca_plot }}" style="width:100%; max-width:800px; border:1px solid #ccc; border-radius:5px;">
-                {% endif %}
+                
                 {% if pca %}
                     <form method="GET" action="{% url 'download_pca' %}" style="margin-top:10px;">
                         <button class="upload-btn" type="submit">Download PCA Data (CSV)</button>

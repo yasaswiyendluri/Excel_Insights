@@ -17,7 +17,7 @@ class DataSummaryService:
         self.numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
         self.categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
 
-    # ── Basic stats ────────────────────────────────────────────────────────────
+   #basic statistics
 
     def get_basic_stats(self) -> Dict[str, Any]:
         total_cells = self.df.shape[0] * self.df.shape[1]
@@ -33,7 +33,7 @@ class DataSummaryService:
             'memory_usage': f"{self.df.memory_usage(deep=True).sum() / 1024**2:.2f} MB",
         }
 
-    # ── Column helpers ─────────────────────────────────────────────────────────
+    #column wise
 
     def _value_counts_table(self, column: str, top_n: int = 10) -> str:
         """Return an HTML table of value counts matching the app's table style."""
@@ -55,7 +55,7 @@ class DataSummaryService:
             {rows}
         </table>"""
 
-    # ── Domain-specific helpers ────────────────────────────────────────────────
+    # Domain wise
 
     def _find_column(self, candidates: list, pool: list) -> str | None:
         for col in pool:
@@ -127,7 +127,7 @@ class DataSummaryService:
             })
         return result
 
-    # ── HTML generator ─────────────────────────────────────────────────────────
+    # HTML part
 
     def generate_summary_html(self) -> str:
         basic   = self.get_basic_stats()
@@ -143,7 +143,7 @@ class DataSummaryService:
 
         html = ""
 
-        # ── Dataset overview ──────────────────────────────────────────────────
+        # Dataset overview section
         html += f"""
         <h3 style="font-size:14px; font-weight:600; color:#4CAF50;
                    margin:0 0 14px 0; padding-bottom:8px; border-bottom:1px solid #2a2a3d;">
@@ -189,7 +189,7 @@ class DataSummaryService:
         </div>
         """
 
-        # ── Age statistics ────────────────────────────────────────────────────
+        # age stats
         if age:
             html += f"""
             <h3 class="sum-section-title">Age Statistics</h3>
@@ -213,21 +213,21 @@ class DataSummaryService:
             </div>
             """
 
-        # ── Gender distribution ───────────────────────────────────────────────
+        # gender distn
         if gender:
             html += f"""
             <h3 class="sum-section-title">Gender Distribution</h3>
             {gender['html_table']}
             """
 
-        # ── Health status ─────────────────────────────────────────────────────
+        # Health stats
         if health:
             html += f"""
             <h3 class="sum-section-title">{health['column_name'].replace('_', ' ').title()} Distribution</h3>
             {health['html_table']}
             """
 
-        # ── Categorical features ──────────────────────────────────────────────
+        # categorical features
         if cats:
             html += '<h3 class="sum-section-title">Categorical Features</h3>'
             for item in cats[:10]:
@@ -243,7 +243,7 @@ class DataSummaryService:
                 </div>
                 """
 
-        # ── Numeric features ──────────────────────────────────────────────────
+        # numeric features  
         if nums:
             html += '<h3 class="sum-section-title">Numeric Features</h3>'
             for item in nums[:10]:
@@ -299,8 +299,6 @@ class DataSummaryService:
 
         return html
 
-
-# ── Helpers ────────────────────────────────────────────────────────────────────
 
 def get_summary_service(df: pd.DataFrame) -> DataSummaryService:
     return DataSummaryService(df)

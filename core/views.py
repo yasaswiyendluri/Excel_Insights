@@ -16,17 +16,13 @@ from reportlab.lib.styles import getSampleStyleSheet
 import io, base64
 from io import BytesIO
 
-# IMPORT NEW SUMMARY SERVICE
+# import summary from services file
 from core.services.summary import generate_quick_summary
 
+#get numeric columns
 
-def get_continuous_numeric_columns(df, unique_ratio_threshold=0.1, max_discrete_unique=10):
-    """
-    Return numeric columns that behave like continuous measures.
-    Excludes binary and low-cardinality discrete numeric columns, which are
-    often encoded categoricals (e.g., male/female -> 0/1) and should not be
-    scaled like continuous variables.
-    """
+def numeric_columns(df, ratio=0.1, unique=10):
+   
     continuous_cols = []
     numeric_cols = df.select_dtypes(include=['number']).columns
 
@@ -40,19 +36,15 @@ def get_continuous_numeric_columns(df, unique_ratio_threshold=0.1, max_discrete_
 
         if unique_count <= 2:
             continue
-        if unique_count <= max_discrete_unique and unique_ratio < unique_ratio_threshold:
+        if unique_count <= unique and unique_ratio < ratio:
             continue
 
         continuous_cols.append(col)
-
     return continuous_cols
 
+# to get numeric columns that are moslty already encoded
+def cat_like_num_columns(df, unique=15):
 
-def get_encoded_categorical_like_columns(df, max_unique_values=15):
-    """
-    Detect numeric columns that are likely encoded categoricals.
-    These should be excluded from scaling for cleaner preprocessing.
-    """
     encoded_like_cols = []
     numeric_cols = df.select_dtypes(include=['number']).columns
 
@@ -62,13 +54,13 @@ def get_encoded_categorical_like_columns(df, max_unique_values=15):
             continue
 
         unique_count = series.nunique()
-        # Integer-like low-cardinality columns are usually encoded categories.
         is_integer_like = np.allclose(series, np.round(series))
-        if is_integer_like and unique_count <= max_unique_values:
+        if is_integer_like and unique_count <= unique:
             encoded_like_cols.append(col)
 
     return encoded_like_cols
 
+# read my uploaded file
 def read_file(file):
     filename = file.name.lower()
     if filename.endswith(('.xlsx', '.xls')):
@@ -78,28 +70,30 @@ def read_file(file):
     else:
         raise ValueError("Unsupported file format")
     
-    df.columns = df.columns.astype(str).str.strip()
+    df.columns = df.columns.astype(str).str.strip() #cleaning column names
     return df
 
+# function for checking the missing vals
 def missing_vals(df):
     missing_info = []
 
     for col in df.columns:
-        missing_count = df[col].isnull().sum()
+        miss_cnt = df[col].isnull().sum()
 
-        if missing_count > 0:
+        if miss_cnt > 0:
             col_type = "numeric" if pd.api.types.is_numeric_dtype(df[col]) else "categorical"
 
             missing_info.append({
                 "name": col,
-                "missing_count": int(missing_count),
+                "missing_count": int(miss_cnt),
                 "type": col_type
             })
 
     return missing_info
 
+#function for basic summary
 def basic_summary(df):
-    """Build the summary content shown in the Basic Summary tab."""
+
     summary = {}
     summary['rows'] = df.shape[0]
     summary['cols'] = df.shape[1]
@@ -112,7 +106,7 @@ def basic_summary(df):
     if not missing.empty:
         summary['missing'] = missing.to_frame("No of missing values").to_html(classes="table")
     else:
-        summary['missing'] = "<p>No missing values!</p>"
+        summary['missing'] = "<p>No missing values</p>"
 
     summary['stats'] = df.describe(include='all').to_html(classes="table")
     summary['tables'] = df.head().to_html(classes="table")
@@ -125,6 +119,7 @@ def basic_summary(df):
 
     return summary
 
+#function for data cleaning and processing
 def data_cleaning(request, df):
     df_processed = df.copy()
     steps = []
@@ -175,8 +170,8 @@ def data_cleaning(request, df):
         steps.append("Categorical encoding applied")
     
     if request.POST.get("scale"):
-        continuous_cols = get_continuous_numeric_columns(df_processed)
-        encoded_like_cols = set(get_encoded_categorical_like_columns(df_processed))
+        continuous_cols = numeric_columns(df_processed)
+        encoded_like_cols = set(cat_like_num_columns(df_processed))
         explicit_encoded_cols = set(encoded_columns)
         scale_cols = [
             col for col in continuous_cols
@@ -197,6 +192,7 @@ def data_cleaning(request, df):
     
     return df_processed, steps
 
+#function for ANOVA feature selection
 def run_anova(df, target_col, feature_count=None):
     if target_col not in df.columns:
         raise ValueError("Selected target column not found in dataset")
@@ -246,6 +242,7 @@ def run_anova(df, target_col, feature_count=None):
 
     return selected_cols, feature_scores
 
+#function for PCA
 def run_pca(df, n_components=2):
     df = df.copy()
     df = df.select_dtypes(include=['number'])
@@ -264,25 +261,11 @@ def run_pca(df, n_components=2):
 
     variance = pca.explained_variance_ratio_
     variance_text = ", ".join([f"PC{i+1}: {round(v*100, 2)}%" for i, v in enumerate(variance)])
-
-    plot_url = None
-    if n_components == 2:
-        plt.figure(figsize=(8, 6))
-        plt.scatter(pca_df["PC1"], pca_df["PC2"], alpha=0.6)
-        plt.xlabel(f"PC1 ({round(variance[0]*100, 2)}%)")
-        plt.ylabel(f"PC2 ({round(variance[1]*100, 2)}%)")
-        plt.title("PCA Scatter Plot")
-        plt.grid(True, alpha=0.3)
-
-        buffer = io.BytesIO()
-        plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
-        buffer.seek(0)
-        plot_url = base64.b64encode(buffer.getvalue()).decode()
-        buffer.close()
-        plt.close()
+    plot_url=None
 
     return pca_df, variance_text, plot_url
 
+#function for insights
 def generate_insights(df):
     insights = []
 
@@ -304,7 +287,7 @@ def generate_insights(df):
             if miss > 0:
                 percent = (miss / len(df)) * 100
                 if percent > 30:
-                    insights.append(f"⚠️ Column '{col}' has high missing values ({round(percent, 2)}%)")
+                    insights.append(f"Column '{col}' has high missing values ({round(percent, 2)}%)")
     else:
         insights.append("No missing values detected")
 
@@ -331,11 +314,11 @@ def generate_insights(df):
 
     return insights
 
+#function for data visualization
 def generate_visualizations(df):
     plots = {}
 
-    # Focus plots on a small set of high-variance numeric columns.
-    num_cols = get_continuous_numeric_columns(df)
+    num_cols = numeric_columns(df)
     if not num_cols:
         num_cols = df.select_dtypes(include='number').columns.tolist()
     if len(num_cols) > 5:
@@ -363,7 +346,7 @@ def generate_visualizations(df):
     
     plots['histograms'] = histograms
 
-    # Pick top correlated pairs to keep scatter plots useful and clean.
+    # Pick top correlated pairs for scatter plots
     scatterplots = []
     if len(num_cols) >= 2:
         pair_scores = []
@@ -472,6 +455,18 @@ def create_pdf_report(df, insights, plots):
             except:
                 pass
 
+    if 'scatterplots' in plots and plots['scatterplots']:
+        elements.append(Paragraph("Scatter Plots", styles['Heading2']))
+        
+        for img in plots['scatterplots'][:3]:
+            try:
+                img_data = base64.b64decode(img)
+                img_buffer = BytesIO(img_data)
+                elements.append(Image(img_buffer, width=500, height=300))
+                elements.append(Spacer(1, 15))
+            except:
+                pass
+
     if 'heatmap' in plots and plots['heatmap']:
         elements.append(Paragraph("Correlation Heatmap", styles['Heading2']))
         try:
@@ -486,10 +481,11 @@ def create_pdf_report(df, insights, plots):
     buffer.seek(0)
     return buffer
 
+
 def home(request):
     context = {'uploaded': False}
 
-    data = request.session.get('data')
+    data = request.session.get('original_data') or request.session.get('data')
     if data:
         df = pd.DataFrame(data)
         summary = basic_summary(df)
@@ -514,8 +510,9 @@ def home(request):
             
             try:
                 df = read_file(file)
-                request.session['data'] = df.to_dict()
-                
+                request.session['original_data'] = df.to_dict()
+                request.session['data'] = df.to_dict() 
+
                 request.session['filename'] = file.name
 
                 summary = basic_summary(df)
@@ -528,7 +525,7 @@ def home(request):
                 context['filename'] = file.name
             except Exception as e:
                 context['error'] = str(e)
-
+        # data cleaning and processing
         elif action == "clean":
             data = request.session.get('data')
 
@@ -543,13 +540,16 @@ def home(request):
             context['processed'] = df_processed.head().to_html(classes="table")
             context['steps'] = steps
             
-            summary = basic_summary(df_processed)
+            original_data = request.session.get('original_data')
+            original_df = pd.DataFrame(original_data)
+
+            summary = basic_summary(original_df)
             context.update(summary)
             plots = generate_visualizations(df_processed)
             context.update(plots)
             context['missing_info'] = missing_vals(df_processed)
             context['uploaded'] = True
-
+        # ANOVA feature selection
         elif action == "anova":
             data = request.session.get('data')
 
@@ -586,7 +586,7 @@ def home(request):
                 context['action'] = "anova"
             except Exception as e:
                 context['error'] = str(e)
-
+        # PCA
         elif action == "pca":
             data = request.session.get('data')
 
@@ -604,7 +604,6 @@ def home(request):
 
                 context['pca'] = pca_df.head().to_html(classes="table", index=False)
                 context['variance'] = variance
-                context['pca_plot'] = plot
                 request.session['pca_data'] = pca_df.to_dict()
 
                 context['uploaded'] = True
@@ -613,6 +612,7 @@ def home(request):
             except Exception as e:
                 context['error'] = str(e)
 
+        # insights
         elif action == "insights":
             data = request.session.get('data')
 
@@ -666,7 +666,7 @@ def download_file(request):
 
 
 def download_basic_stats(request):
-    data = request.session.get('data')
+    data = request.session.get('original_data')
     if data is None:
         return HttpResponse("No data available")
 
